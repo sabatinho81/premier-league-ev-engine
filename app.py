@@ -366,6 +366,10 @@ def save_pure_accuracy(home, away, probs):
     
     if os.path.exists(acc_file):
         df = pd.read_csv(acc_file)
+        # Prevent duplicate sequential logging for the same match
+        if not df.empty and df.iloc[-1]["HomeTeam"] == home and df.iloc[-1]["AwayTeam"] == away:
+            st.info("ℹ️ This match is already the last entry in your Pure Accuracy ledger.")
+            return
         df = pd.concat([df, pd.DataFrame([entry])], ignore_index=True)
     else:
         df = pd.DataFrame([entry])
@@ -391,9 +395,6 @@ def save_betting_performance(home, away, probs, odds_h, odds_d, odds_a, threshol
     best_bet = max(ev_vals, key=ev_vals.get)
     best_ev = ev_vals[best_bet]
     
-    if best_ev < threshold:
-        st.warning(f"⚠️ Best bet EV ({best_ev:.2f}) is below your minimum threshold ({threshold}). Saving anyway to ledger.")
-        
     entry = {
         "Timestamp": timestamp,
         "Fixture": f"{home} vs {away}",
@@ -406,11 +407,14 @@ def save_betting_performance(home, away, probs, odds_h, odds_d, odds_a, threshol
     
     if os.path.exists(ev_file):
         df = pd.read_csv(ev_file)
+        if not df.empty and df.iloc[-1]["Fixture"] == f"{home} vs {away}":
+            st.info("ℹ️ This fixture is already the last entry in your Betting Performance ledger.")
+            return
         df = pd.concat([df, pd.DataFrame([entry])], ignore_index=True)
     else:
         df = pd.DataFrame([entry])
     df.to_csv(ev_file, index=False)
-    st.success(f"✅ Saved +EV bet ({best_bet} @ {odds_dict[best_bet]:.2f}) to Betting Performance ledger!")
+    st.success(f"✅ Saved recommended bet ({best_bet} @ {odds_dict[best_bet]:.2f}) to Betting Performance ledger!")
 
 # ==========================================
 # 5. APP EXECUTION & UI LAYOUT
@@ -588,7 +592,7 @@ with tab_match:
             render_ev_card(f"🤝 {t('draw').upper()}", probs[1], odds_d, ev_d)
             render_ev_card(f"✈️ {away_team}", probs[0], odds_a, ev_a)
 
-            # Manual Save Buttons depending on Bookie Odds Toggle Status
+            # Manual Save Buttons dependent on Bookie Odds Toggle Status
             st.markdown("---")
             if not st.session_state.bookies_toggle:
                 if st.button("📥 Save to Pure Match Accuracy Ledger", use_container_width=True, type="primary"):
@@ -647,91 +651,102 @@ with tab_model:
     st.bar_chart(clean_imps, height=400, color="#963CFF")
 
 # --------------------------
-# TAB 3: SEPARATED PERFORMANCE VERIFIERS
+# TAB 3: PASSWORD PROTECTED AUDIT LEDGERS
 # --------------------------
 with tab_audit:
     st.markdown("<h2>🎯 Performance Verifiers & Ledgers</h2>")
     
-    sub_tab_acc, sub_tab_ev = st.tabs(["📈 Pure Match Accuracy", "💷 +EV Betting Performance & ROI"])
+    # Master PIN Protection for personal data safety
+    master_password = "admin"  # Change this password to your preferred PIN
+    entered_password = st.text_input("🔒 Enter Master PIN to access and manage tracking ledgers", type="password", key="audit_pin")
     
-    # --- SUB-TAB 1: PURE ACCURACY ---
-    with sub_tab_acc:
-        st.subheader("Pure Directional Match Accuracy")
-        st.write("Tracks strictly whether the model correctly picked Home Win, Draw, or Away Win based on match stats.")
-        acc_file = "accuracy_audit.csv"
+    if entered_password == master_password:
+        st.success("🔓 Access granted.")
+        sub_tab_acc, sub_tab_ev = st.tabs(["📈 Pure Match Accuracy", "💷 +EV Betting Performance & ROI"])
         
-        if os.path.exists(acc_file):
-            df_acc = pd.read_csv(acc_file)
-            graded_acc = df_acc[df_acc["Actual_Result"] != "Pending"]
+        # --- SUB-TAB 1: PURE ACCURACY ---
+        with sub_tab_acc:
+            st.subheader("Pure Directional Match Accuracy")
+            st.write("Tracks strictly whether the model correctly picked Home Win, Draw, or Away Win based on match stats.")
+            acc_file = "accuracy_audit.csv"
             
-            if not graded_acc.empty:
-                correct = (graded_acc["Model_Prediction"] == graded_acc["Actual_Result"]).sum()
-                acc_pct = (correct / len(graded_acc)) * 100
-                c1, c2, c3 = st.columns(3)
-                c1.metric("Total Graded Matches", len(graded_acc))
-                c2.metric("Correct Predictions", correct)
-                c3.metric("Directional Accuracy", f"{acc_pct:.1f}%")
-                st.markdown("---")
+            if os.path.exists(acc_file):
+                df_acc = pd.read_csv(acc_file)
+                graded_acc = df_acc[df_acc["Actual_Result"] != "Pending"]
                 
-            df_acc.insert(0, "Select", False)
-            edited_acc = st.data_editor(df_acc, num_rows="dynamic", use_container_width=True, key="acc_editor")
-            
-            col_s1, col_d1 = st.columns(2)
-            with col_s1:
-                if st.button("💾 Save Accuracy Grades"):
-                    edited_acc.drop(columns=["Select"]).to_csv(acc_file, index=False)
-                    st.success("✅ Accuracy audit saved successfully!")
-                    st.rerun()
-            with col_d1:
-                if st.button("🗑️ Delete Selected Accuracy Rows", type="primary"):
-                    edited_acc[edited_acc["Select"] == False].drop(columns=["Select"]).to_csv(acc_file, index=False)
-                    st.success("🗑️ Selected rows deleted!")
-                    st.rerun()
-        else:
-            st.info("ℹ️ No pure predictions logged yet. Click 'Save to Pure Match Accuracy Ledger' in the Match Center tab when bookie toggle is OFF.")
+                if not graded_acc.empty:
+                    correct = (graded_acc["Model_Prediction"] == graded_acc["Actual_Result"]).sum()
+                    acc_pct = (correct / len(graded_acc)) * 100
+                    c1, c2, c3 = st.columns(3)
+                    c1.metric("Total Graded Matches", len(graded_acc))
+                    c2.metric("Correct Predictions", correct)
+                    c3.metric("Directional Accuracy", f"{acc_pct:.1f}%")
+                    st.markdown("---")
+                    
+                df_acc.insert(0, "Select", False)
+                edited_acc = st.data_editor(df_acc, num_rows="dynamic", use_container_width=True, key="acc_editor")
+                
+                col_s1, col_d1 = st.columns(2)
+                with col_s1:
+                    if st.button("💾 Save Accuracy Grades"):
+                        edited_acc.drop(columns=["Select"]).to_csv(acc_file, index=False)
+                        st.success("✅ Accuracy audit saved successfully!")
+                        st.rerun()
+                with col_d1:
+                    if st.button("🗑️ Delete Selected Accuracy Rows", type="primary"):
+                        edited_acc[edited_acc["Select"] == False].drop(columns=["Select"]).to_csv(acc_file, index=False)
+                        st.success("🗑️ Selected rows deleted!")
+                        st.rerun()
+            else:
+                st.info("ℹ️ No pure predictions logged yet. Click 'Save to Pure Match Accuracy Ledger' in the Match Center tab when the bookie toggle is OFF.")
 
-    # --- SUB-TAB 2: BETTING PERFORMANCE & ROI ---
-    with sub_tab_ev:
-        st.subheader("Value Betting Performance & ROI Ledger")
-        st.write("Displays the recommended high-conviction bet, bookmaker odds taken, and financial returns.")
-        ev_file = "ev_audit.csv"
-        
-        if os.path.exists(ev_file):
-            df_ev = pd.read_csv(ev_file)
-            graded_ev = df_ev[df_ev["Actual_Outcome"] != "Pending"]
+        # --- SUB-TAB 2: BETTING PERFORMANCE & ROI ---
+        with sub_tab_ev:
+            st.subheader("Value Betting Performance & ROI Ledger")
+            st.write("Displays the recommended high-conviction bet, bookmaker odds taken, and financial returns.")
+            ev_file = "ev_audit.csv"
             
-            if not graded_ev.empty:
-                wins = graded_ev[graded_ev["Actual_Outcome"] == "Won"]
-                losses = graded_ev[graded_ev["Actual_Outcome"] == "Lost"]
+            if os.path.exists(ev_file):
+                df_ev = pd.read_csv(ev_file)
+                graded_ev = df_ev[df_ev["Actual_Outcome"] != "Pending"]
                 
-                total_staked = len(graded_ev) * 10
-                total_profit = sum([(row["Odds"] * row["Stake"]) - row["Stake"] for _, row in wins.iterrows()]) - (len(losses) * 10)
-                roi = (total_profit / total_staked) * 100 if total_staked > 0 else 0
+                if not graded_ev.empty:
+                    wins = graded_ev[graded_ev["Actual_Outcome"] == "Won"]
+                    losses = graded_ev[graded_ev["Actual_Outcome"] == "Lost"]
+                    
+                    total_staked = len(graded_ev) * 10
+                    total_profit = sum([(row["Odds"] * row["Stake"]) - row["Stake"] for _, row in wins.iterrows()]) - (len(losses) * 10)
+                    roi = (total_profit / total_staked) * 100 if total_staked > 0 else 0
+                    
+                    e1, e2, e3 = st.columns(3)
+                    e1.metric("Value Bets Graded", len(graded_ev))
+                    e2.metric("Net Profit / Loss", f"{st.session_state.currency}{total_profit:.2f}")
+                    e3.metric("Realized ROI", f"{roi:+.2f}%")
+                    st.markdown("---")
+                    
+                df_ev.insert(0, "Select", False)
+                edited_ev = st.data_editor(
+                    df_ev,
+                    num_rows="dynamic",
+                    use_container_width=True,
+                    key="ev_editor"
+                )
                 
-                e1, e2, e3 = st.columns(3)
-                e1.metric("Value Bets Graded", len(graded_ev))
-                e2.metric("Net Profit / Loss", f"{st.session_state.currency}{total_profit:.2f}")
-                e3.metric("Realized ROI", f"{roi:+.2f}%")
-                st.markdown("---")
-                
-            df_ev.insert(0, "Select", False)
-            edited_ev = st.data_editor(
-                df_ev,
-                num_rows="dynamic",
-                use_container_width=True,
-                key="ev_editor"
-            )
-            
-            col_s2, col_d2 = st.columns(2)
-            with col_s2:
-                if st.button("💾 Save EV Ledger Updates"):
-                    edited_ev.drop(columns=["Select"]).to_csv(ev_file, index=False)
-                    st.success("✅ EV Ledger saved successfully!")
-                    st.rerun()
-            with col_d2:
-                if st.button("🗑️ Delete Selected EV Rows", type="primary"):
-                    edited_ev[edited_ev["Select"] == False].drop(columns=["Select"]).to_csv(ev_file, index=False)
-                    st.success("🗑️ Selected EV rows deleted!")
-                    st.rerun()
+                col_s2, col_d2 = st.columns(2)
+                with col_s2:
+                    if st.button("💾 Save EV Ledger Updates"):
+                        edited_ev.drop(columns=["Select"]).to_csv(ev_file, index=False)
+                        st.success("✅ EV Ledger saved successfully!")
+                        st.rerun()
+                with col_d2:
+                    if st.button("🗑️ Delete Selected EV Rows", type="primary"):
+                        edited_ev[edited_ev["Select"] == False].drop(columns=["Select"]).to_csv(ev_file, index=False)
+                        st.success("🗑️ Selected EV rows deleted!")
+                        st.rerun()
+            else:
+                st.info("ℹ️ No +EV bets logged yet. Turn ON bookie toggle, enter odds, and click 'Save to Betting Performance Ledger' in the Match Center tab.")
+    else:
+        if entered_password != "":
+            st.error("❌ Incorrect PIN.")
         else:
-            st.info("ℹ️ No +EV bets logged yet. Turn ON bookie toggle, enter odds, and click 'Save to Betting Performance Ledger' in the Match Center tab.")
+            st.info("🔒 This tab is password-protected to safeguard your personal tracking logs from other visitors. Please enter your PIN above.")
