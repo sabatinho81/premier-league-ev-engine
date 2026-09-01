@@ -1,0 +1,11 @@
+Timestamp,HomeTeam,AwayTeam,Model_Prediction,Confidence,Actual_Result
+2026-09-01 12:34,Ipswich,Liverpool,Away Win (Liverpool),48.6%,Pending
+2026-09-01 12:35,Newcastle,Bournemouth,Away Win (Bournemouth),36.6%,Pending
+2026-09-01 12:35,Brentford,Sunderland,Draw,50.4%,Pending
+2026-09-01 12:39,Nott'm Forest,Tottenham,Draw,37.2%,Pending
+2026-09-01 13:03,Man City,Coventry,Home Win (Man City),52.6%,Pending
+2026-09-01 13:04,Fulham,Crystal Palace,Home Win (Fulham),50.0%,Pending
+2026-09-01 13:05,Brighton,Leeds,Away Win (Leeds),57.8%,Pending
+2026-09-01 13:05,Hull,Aston Villa,Home Win (Hull),40.2%,Pending
+2026-09-01 13:06,Everton,Man United,Away Win (Man United),44.3%,Pending
+2026-09-01 13:07,Arsenal,Chelsea,Home Win (Arsenal),49.2%,Pending
