@@ -1,7 +1,5 @@
 streamlit
 pandas
-numpy<2.0
-scikit-learn
+numpy
 xgboost
-requests
-fastf1
+scikit-learn
