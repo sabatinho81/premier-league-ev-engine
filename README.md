@@ -2,7 +2,7 @@
 
 A production-ready, bilingual (EN/PL) quantitative football prediction engine combining venue-specific tactical metrics with real-time market-implied probabilities.
 
-Explore Live App - https://premier-league-hybrid-engine.streamlit.app/
+Explore Live App - https://premier-league-hybrid-engine.streamlit.app/ (not always working, installation guide below)
 
 🧠 Architecture & Methodology
 
@@ -46,3 +46,19 @@ Web Interface: Streamlit Cloud (Live Demo)
 Data Source: Football-data.co.uk automated pipelines
 
 Persistence: Local CSV audit ledgers with interactive st.data_editor controls
+
+🚀 Quickstart & Installation
+
+1. Clone the repository:
+
+   it clone [https://github.com/your-username/pl-hybrid-engine.git](https://github.com/your-username/pl-hybrid-engine.git)
+
+   cd pl-hybrid-engine
+
+3. Install dependencies:
+
+   pip install -r requirements.txt
+
+4. Run the Streamlit application locally:
+
+   streamlit run app.py
